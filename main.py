@@ -4,10 +4,10 @@ import numpy as np
 
 eventKey = "2026mnwi"
 
-
-startMatch = 56
+startMatch = 1
 endMatch = 76
 offsetMatches = 2
+
 
 originalRPDictionary = {}
 RPDictionary = {}
@@ -18,6 +18,48 @@ matches = tba.get_event_matches(eventKey)
 rng = np.random.default_rng()
 
 simulations = 10000
+
+teamList = [111,
+112,
+167,
+525,
+695,
+967,
+2220,
+2290,
+2358,
+2508,
+2530,
+2531,
+2549,
+2667,
+2977,
+2987,
+3055,
+3061,
+3090,
+3206,
+3284,
+3928,
+4065,
+4143,
+4174,
+4646,
+4663,
+4859,
+5339,
+5541,
+5576,
+5822,
+5847,
+5914,
+6419,
+6420,
+7531,
+7850,
+7858,
+9082,
+11246]
 
 def run():
     makeRPDictionary()
@@ -47,12 +89,12 @@ def simulateOneTeamPlacing(team):
     finalDict = dict(sorted(finalDict.items(), key=lambda item: item[1], reverse=True))
     print(finalDict)
 
+
 def simulateAllTeamsIndividualy():
     global RPDictionary
     rawDictionary = {}
-    for i in range(len(RPDictionary)):
-        rawDictionary.update({list(RPDictionary.keys())[i]: []})
-        print(list(rawDictionary.values())[i])
+    for i in range(len(teamList)):
+        rawDictionary.update({teamList[i]: []})
     for i in range(simulations):
         for t in range(endMatch - startMatch):
             simulateMatch(t + startMatch)
@@ -79,20 +121,15 @@ def simulateAllTeamsIndividualy():
     for i in range(len(totalFinalDict)):
         print(f"{list(totalFinalDict.items())[i]}\n")
 
-
 def makeRPDictionary():
     global RPDictionary
     global originalRPDictionary
-    for i in range(startMatch):
+    for i in range(len(teamList)):
+        RPDictionary.update({teamList[i]: 0})
+    for i in range(startMatch - 1):
         for t in range(3):
-            if(not(matches[i+offsetMatches]["alliances"]["blue"]["team_keys"][t] in RPDictionary)):
-                RPDictionary[matches[i+offsetMatches]["alliances"]["blue"]["team_keys"][t]] = matches[i+offsetMatches]["score_breakdown"]["blue"]["rp"]
-            else:
-                RPDictionary[matches[i+offsetMatches]["alliances"]["blue"]["team_keys"][t]] += matches[i+offsetMatches]["score_breakdown"]["blue"]["rp"]
-            if(not(matches[i+offsetMatches]["alliances"]["red"]["team_keys"][t] in RPDictionary)):
-                RPDictionary[matches[i+offsetMatches]["alliances"]["red"]["team_keys"][t]] = matches[i+offsetMatches]["score_breakdown"]["red"]["rp"]
-            else:
-                RPDictionary[matches[i+offsetMatches]["alliances"]["red"]["team_keys"][t]] += matches[i+offsetMatches]["score_breakdown"]["red"]["rp"]
+            RPDictionary[int(matches[i+offsetMatches]["alliances"]["blue"]["team_keys"][t][3:])] += matches[i+offsetMatches]["score_breakdown"]["blue"]["rp"]
+            RPDictionary[int(matches[i+offsetMatches]["alliances"]["red"]["team_keys"][t][3:])] += matches[i+offsetMatches]["score_breakdown"]["red"]["rp"]
     originalRPDictionary = RPDictionary.copy()
 
 def makeDataDictionary():
@@ -100,8 +137,8 @@ def makeDataDictionary():
     df = pd.read_csv('data.csv')
     totalSum = 0
     totalCount = 0
-    for i in range(len(RPDictionary)):
-        team = int(list(RPDictionary.items())[i][0][3:])
+    for i in range(len(teamList)):
+        team = int(teamList[i])
         pointListStr = df.loc[df['Team Number'] == team]['Points'].tolist()
         pointList = [float(item) for item in pointListStr]
         sum = 0
@@ -126,7 +163,7 @@ def simulateMatch(number):
     for i in range(3):
         redSum += (redList[i][2] * rng.standard_t(redList[i][0]-1, size=1) + redList[i][1]).item()
         blueSum += (blueList[i][2] * rng.standard_t(blueList[i][0]-1, size=1) + blueList[i][1]).item()
-    
+   
     redRp = 0
     blueRp = 0
     if(redSum > blueSum):
@@ -142,8 +179,8 @@ def simulateMatch(number):
         if(blueSum > 360):
             blueRp += 1
     for i in range(3):
-        RPDictionary[redTeams[i]] += redRp
-        RPDictionary[blueTeams[i]] += blueRp
+        RPDictionary[int(redTeams[i][3:])] += redRp
+        RPDictionary[int(blueTeams[i][3:])] += blueRp
 
 if __name__ == "__main__":
     run()
