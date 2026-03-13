@@ -1,12 +1,13 @@
 import tba
 import pandas as pd
 import numpy as np
+import copy
 
 eventKey = "2026mnwi"
 
-startMatch = 1
+startMatch = 56
 endMatch = 76
-offsetMatches = 2
+offsetMatches = 3
 
 
 originalRPDictionary = {}
@@ -76,7 +77,7 @@ def simulateOneTeamPlacing(team):
             print(i)
         sortedRpDictionary = dict(sorted(RPDictionary.items(), key=lambda item: item[1], reverse=True))
         placingList.append(list(sortedRpDictionary.keys()).index(team) + 1)
-        RPDictionary = originalRPDictionary.copy()
+        RPDictionary = copy.deepcopy(originalRPDictionary)
     placingDict = {}
     for i in range(len(placingList)):
         if(not(placingList[i] in placingDict)):
@@ -103,7 +104,7 @@ def simulateAllTeamsIndividualy():
         sortedRpDictionary = dict(sorted(RPDictionary.items(), key=lambda item: item[1], reverse=True))
         for t in range(len(rawDictionary)):
             list(rawDictionary.values())[t].append(list(sortedRpDictionary.keys()).index(list(rawDictionary.keys())[t]) + 1)
-        RPDictionary = originalRPDictionary.copy()
+        RPDictionary = copy.deepcopy(originalRPDictionary)
     totalFinalDict = {}
     for i in range(len(rawDictionary)):
         placingDict = {}
@@ -117,6 +118,7 @@ def simulateAllTeamsIndividualy():
             finalDict.update({list(placingDict.keys())[t]: list(placingDict.values())[t]/simulations})
         finalDict = dict(sorted(finalDict.items(), key=lambda item: item[1], reverse=True))
         totalFinalDict.update({list(rawDictionary.keys())[i]: finalDict})
+    totalFinalDict = dict(sorted(totalFinalDict.items(), key=lambda item: list(item[1].values())[0], reverse=True))
     totalFinalDict = dict(sorted(totalFinalDict.items(), key=lambda item: list(item[1].keys())[0]))
     for i in range(len(totalFinalDict)):
         print(f"{list(totalFinalDict.items())[i]}\n")
@@ -125,12 +127,12 @@ def makeRPDictionary():
     global RPDictionary
     global originalRPDictionary
     for i in range(len(teamList)):
-        RPDictionary.update({teamList[i]: 0})
+        RPDictionary.update({teamList[i]: [0,0]})
     for i in range(startMatch - 1):
         for t in range(3):
-            RPDictionary[int(matches[i+offsetMatches]["alliances"]["blue"]["team_keys"][t][3:])] += matches[i+offsetMatches]["score_breakdown"]["blue"]["rp"]
-            RPDictionary[int(matches[i+offsetMatches]["alliances"]["red"]["team_keys"][t][3:])] += matches[i+offsetMatches]["score_breakdown"]["red"]["rp"]
-    originalRPDictionary = RPDictionary.copy()
+            RPDictionary[int(matches[i+offsetMatches]["alliances"]["blue"]["team_keys"][t][3:])][0] += matches[i+offsetMatches]["score_breakdown"]["blue"]["rp"]
+            RPDictionary[int(matches[i+offsetMatches]["alliances"]["red"]["team_keys"][t][3:])][0] += matches[i+offsetMatches]["score_breakdown"]["red"]["rp"]
+    originalRPDictionary = copy.deepcopy(RPDictionary)
 
 def makeDataDictionary():
     global populationMean
@@ -179,8 +181,7 @@ def simulateMatch(number):
         if(blueSum > 360):
             blueRp += 1
     for i in range(3):
-        RPDictionary[int(redTeams[i][3:])] += redRp
-        RPDictionary[int(blueTeams[i][3:])] += blueRp
-
+        RPDictionary[int(redTeams[i][3:])][0] += redRp
+        RPDictionary[int(blueTeams[i][3:])][0] += blueRp
 if __name__ == "__main__":
     run()
