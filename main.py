@@ -5,7 +5,7 @@ import copy
 
 eventKey = "2026mnwi"
 
-startMatch = 56
+startMatch = 1
 endMatch = 76
 offsetMatches = 3
 
@@ -18,7 +18,9 @@ matches = tba.get_event_matches(eventKey)
 
 rng = np.random.default_rng()
 
-simulations = 10000
+simulations = 2000
+
+totalMatchesPerTeam = 11
 
 teamList = [111,
 112,
@@ -65,7 +67,6 @@ teamList = [111,
 def run():
     makeRPDictionary()
     makeDataDictionary()
-    simulateAllTeamsIndividualy()
 
 def simulateOneTeamPlacing(team):
     global RPDictionary
@@ -122,6 +123,7 @@ def simulateAllTeamsIndividualy():
     totalFinalDict = dict(sorted(totalFinalDict.items(), key=lambda item: list(item[1].keys())[0]))
     for i in range(len(totalFinalDict)):
         print(f"{list(totalFinalDict.items())[i]}\n")
+    return list(totalFinalDict.items())
 
 def makeRPDictionary():
     global RPDictionary
@@ -132,6 +134,8 @@ def makeRPDictionary():
         for t in range(3):
             RPDictionary[int(matches[i+offsetMatches]["alliances"]["blue"]["team_keys"][t][3:])][0] += matches[i+offsetMatches]["score_breakdown"]["blue"]["rp"]
             RPDictionary[int(matches[i+offsetMatches]["alliances"]["red"]["team_keys"][t][3:])][0] += matches[i+offsetMatches]["score_breakdown"]["red"]["rp"]
+            RPDictionary[int(matches[i+offsetMatches]["alliances"]["blue"]["team_keys"][t][3:])][1] += 1
+            RPDictionary[int(matches[i+offsetMatches]["alliances"]["red"]["team_keys"][t][3:])][1] += 1
     originalRPDictionary = copy.deepcopy(RPDictionary)
 
 def makeDataDictionary():
@@ -181,7 +185,12 @@ def simulateMatch(number):
         if(blueSum > 360):
             blueRp += 1
     for i in range(3):
-        RPDictionary[int(redTeams[i][3:])][0] += redRp
-        RPDictionary[int(blueTeams[i][3:])][0] += blueRp
+        if(RPDictionary[int(redTeams[i][3:])][1] < totalMatchesPerTeam):
+            RPDictionary[int(redTeams[i][3:])][0] += redRp
+            RPDictionary[int(redTeams[i][3:])][1] += 1
+        if(RPDictionary[int(blueTeams[i][3:])][1] < totalMatchesPerTeam):
+            RPDictionary[int(blueTeams[i][3:])][0] += blueRp
+            RPDictionary[int(blueTeams[i][3:])][1] += 1
+
 if __name__ == "__main__":
     run()
