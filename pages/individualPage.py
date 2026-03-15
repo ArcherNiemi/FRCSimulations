@@ -32,7 +32,6 @@ dash.register_page(__name__, path="/individualPage")
 
 # App layout
 layout = [
-    html.Div(children='My First App with Data and a Graph'),
     dag.AgGrid(
         rowData=data,
         columnDefs=columnList

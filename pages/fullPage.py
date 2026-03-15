@@ -31,7 +31,7 @@ def updateDict(numberOfPlaces):
     rows = [{"teams": str(k), "probability": v} for k, v in newDict.items()]
     return rows
 
-def filterDict(teams, rows):
+def filterDict(teams, ranks, rows):
     newDict = {}
     for i in range(len(rows)):
         key = ast.literal_eval(rows[i]["teams"])
@@ -40,49 +40,66 @@ def filterDict(teams, rows):
         for t in range(len(teams)):
             if(not(int(teams[t]) in key)):
                 works = False
+                break
+            rankWorks = False
+            if(ranks != ['None'] and ranks != [""]):
+                for w in range(len(ranks)):
+                    if(list(ast.literal_eval(rows[i]["teams"])).index(int(teams[t]))+1 == int(ranks[w])):
+                        rankWorks = True
+                if(rankWorks == False):
+                    works = False
         if(works):
             newDict[key] = float(rows[i]["probability"])
 
-    rows = [{"teams": str(k), "probability": v} for k, v in newDict.items()]
+    rows = [{"teams": str(k), "probability": round(v,4)} for k, v in newDict.items()]
     return rows
 
 dash.register_page(__name__, path="/fullPage")
 
 layout = html.Div([
-    html.Div("My First App with Data and a Graph"),
 
-    dcc.Input(id="depthInput", type="number", placeholder="number", value=2),
-    dcc.Input(id="filterInput", type="text", placeholder="number"),
+    dcc.Input(id="depthInput", type="number", placeholder="depth", value=2),
+    dcc.Input(id="teamInput", type="text", placeholder="teams"),
+    dcc.Input(id="rankInput", type="text", placeholder="rank"),
 
     dag.AgGrid(
         id="output",
         columnDefs=[
-            {"field": "teams", "width": 300},
+            {"field": "teams", "width": 350},
             {"field": "probability"}
         ],
         rowData=[],
-        dashGridOptions={
-            "pagination": True,
-            "paginationPageSize": 20
-        }
     ),
+    dcc.Textarea(
+        id="textArea",
+        value="probability: 100%",
+        readOnly=True
+    )
 ])
 
 
 @callback(
-    Output("output", "rowData"),
+    [Output("output", "rowData"),
+    Output("textArea", "value")],
     Input("depthInput", "value"),
-    Input("filterInput", "value"),
+    Input("teamInput", "value"),
+    Input("rankInput", "value"),
 )
-def update_grid(depth, team_filter):
+def update_grid(depth, team_filter, ranks):
 
     if depth is None:
-        return []
+        return [None, "1"]
 
     rows = updateDict(int(depth))
 
     if team_filter is not None and team_filter != "":
+        splitRanks = str(ranks).split(",")
+        print(splitRanks)
         splitTeams = str(team_filter).split(",")
-        rows = filterDict(splitTeams, rows)
+        rows = filterDict(splitTeams, splitRanks, rows)
+    
+    sum = 0
+    for i in range(len(rows)):
+        sum += rows[i]["probability"]
 
-    return rows
+    return [rows, str(round(sum,4))]
