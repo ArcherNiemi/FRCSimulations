@@ -2,12 +2,13 @@ import tba
 import pandas as pd
 import numpy as np
 import copy
+import random
 
-eventKey = "2026mnwi"
+eventKey = "2026iacf"
 
-startMatch = 56
-endMatch = 76
-offsetMatches = 3
+startMatch = 1
+endMatch = 71
+offsetMatches = 0
 
 
 originalRPDictionary = {}
@@ -18,56 +19,69 @@ matches = tba.get_event_matches(eventKey)
 
 rng = np.random.default_rng()
 
-simulations = 100000
+simulations = 1
 
-totalMatchesPerTeam = 11
+totalMatchesPerTeam = 8
 
-teamList = [111,
-112,
-167,
-525,
-695,
-967,
-2220,
-2290,
-2358,
-2508,
-2530,
-2531,
-2549,
-2667,
-2977,
-2987,
+teamList = [3928,
+10439,
+11219,
 3055,
-3061,
-3090,
-3206,
-3284,
-3928,
-4065,
-4143,
-4174,
-4646,
-4663,
-4859,
-5339,
-5541,
-5576,
-5822,
-5847,
-5914,
-6419,
-6420,
+4260,
+5935,
+6805,
 7531,
-7850,
-7858,
-9082,
-11246]
+8766,
+6419,
+4728,
+7257,
+5442,
+4646,
+2847,
+2654,
+1108,
+167,
+6147,
+5041,
+525,
+7848,
+967,
+2227,
+3267,
+648,
+59,
+5914,
+11312,
+8821,
+8822,
+11241,
+5275,
+11210,
+6420,
+3723,
+9092,
+5837,
+9061,
+9570,
+1997,
+10476,
+3298,
+5141,
+5557,
+5576,
+5809,
+6455,
+7038,
+8737,
+8770,
+9543,
+9579]
 
 def run():
     makeRPDictionary()
     makeDataDictionary()
-    simulateAllTeamsIndividualy()
+    print(matches)
+    simulateOneTeamPlacing(7257)
 
 def simulateOneTeamPlacing(team):
     global RPDictionary
@@ -75,6 +89,7 @@ def simulateOneTeamPlacing(team):
     for i in range(simulations):
         for t in range(endMatch - startMatch):
             simulateMatch(t + startMatch)
+            print(RPDictionary)
         if(i % 100 == 0):
             print(i)
         for t in range(len(RPDictionary)):
@@ -146,7 +161,7 @@ def simulateTopScenarios(numberFromTop):
         RPDictionary = copy.deepcopy(originalRPDictionary)
     finalDict = dict(sorted(rawDictionary.items(), key=lambda item: item[1], reverse=True))
     finalDict = dict(zip(finalDict.keys(), np.array(list(finalDict.values()))/simulations))
-    save_dict_to_csv("simulation2", finalDict)
+    save_dict_to_csv("simulateScenarios", finalDict)
 
 
 def makeRPDictionary():
@@ -171,6 +186,8 @@ def makeDataDictionary():
         team = int(teamList[i])
         pointListStr = df.loc[df['Team Number'] == team]['Points'].tolist()
         pointList = [float(item) for item in pointListStr]
+        if(pointList == []):
+            pointList = [0]
         sum = 0
         for i in range(len(pointList)):
             sum += pointList[i]
@@ -191,8 +208,16 @@ def simulateMatch(number):
     redPoints = []
     bluePoints = []
     for i in range(3):
-        redPoints.append((redList[i][2] * rng.standard_t(redList[i][0]-1, size=1) + redList[i][1]).item())
-        bluePoints.append((blueList[i][2] * rng.standard_t(blueList[i][0]-1, size=1) + blueList[i][1]).item())
+        if(redList[i][0] > 1):
+            redPoints.append((redList[i][2] * rng.standard_t(redList[i][0]-1, size=1) + redList[i][1]).item())
+        else:
+            redPoints.append((random.uniform(redList[i][1]/2,redList[i][1]*1.5) + redList[i][1]))
+        if(blueList[i][0] > 1):
+            bluePoints.append((blueList[i][2] * rng.standard_t(blueList[i][0]-1, size=1) + blueList[i][1]).item())
+        else:
+            bluePoints.append((random.uniform(redList[i][1]/2,redList[i][1]*1.5) + blueList[i][1]))
+
+
     redSum = sum(redPoints)
     blueSum = sum(bluePoints)
 
