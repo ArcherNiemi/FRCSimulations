@@ -6,7 +6,7 @@ import random
 
 eventKey = "2026iacf"
 
-startMatch = 1
+startMatch = 52
 endMatch = 71
 offsetMatches = 0
 
@@ -15,13 +15,15 @@ originalRPDictionary = {}
 RPDictionary = {}
 dataDictionary = {}
 
-matches = tba.get_event_matches(eventKey)
+matches = sorted(tba.get_event_matches(eventKey), key=lambda m: m['match_number'])
 
 rng = np.random.default_rng()
 
-simulations = 1
+simulations = 50000
 
 totalMatchesPerTeam = 8
+
+teamAverageRp = {51: 0, 61: 0, 70: 0}
 
 teamList = [3928,
 10439,
@@ -80,16 +82,16 @@ teamList = [3928,
 def run():
     makeRPDictionary()
     makeDataDictionary()
-    print(matches)
-    simulateOneTeamPlacing(7257)
+    simulateTopScenarios(8)
 
 def simulateOneTeamPlacing(team):
     global RPDictionary
+    global teamAverageRp
     placingList = []
+    print("here")
     for i in range(simulations):
-        for t in range(endMatch - startMatch):
-            simulateMatch(t + startMatch)
-            print(RPDictionary)
+        for t in range(endMatch - startMatch+1):
+            simulateMatch(t + startMatch-1)
         if(i % 100 == 0):
             print(i)
         for t in range(len(RPDictionary)):
@@ -98,6 +100,7 @@ def simulateOneTeamPlacing(team):
         sortedRpDictionary = dict(sorted(sortedRpDictionary.items(), key=lambda item: item[1][0], reverse=True))
         placingList.append(list(sortedRpDictionary.keys()).index(team) + 1)
         RPDictionary = copy.deepcopy(originalRPDictionary)
+    print(teamAverageRp)
     placingDict = {}
     for i in range(len(placingList)):
         if(not(placingList[i] in placingDict)):
@@ -117,8 +120,8 @@ def simulateAllTeamsIndividualy():
     for i in range(len(teamList)):
         rawDictionary.update({teamList[i]: []})
     for i in range(simulations):
-        for t in range(endMatch - startMatch):
-            simulateMatch(t + startMatch)
+        for t in range(endMatch - startMatch+1):
+            simulateMatch(t + startMatch-1)
         if(i % 100 == 0):
             print(i)
         sortedRpDictionary = dict(sorted(RPDictionary.items(), key=lambda item: item[1], reverse=True))
@@ -148,8 +151,8 @@ def simulateTopScenarios(numberFromTop):
     global RPDictionary
     rawDictionary = {}
     for i in range(simulations):
-        for t in range(endMatch - startMatch):
-            simulateMatch(t + startMatch)
+        for t in range(endMatch - startMatch+1):
+            simulateMatch(t + startMatch-1)
         if(i % 100 == 0):
             print(i)
         sortedRpDictionary = dict(sorted(RPDictionary.items(), key=lambda item: item[1], reverse=True))
@@ -176,6 +179,7 @@ def makeRPDictionary():
             RPDictionary[int(matches[i+offsetMatches]["alliances"]["blue"]["team_keys"][t][3:])][1] += 1
             RPDictionary[int(matches[i+offsetMatches]["alliances"]["red"]["team_keys"][t][3:])][1] += 1
     originalRPDictionary = copy.deepcopy(RPDictionary)
+    print(RPDictionary)
 
 def makeDataDictionary():
     global populationMean
@@ -198,6 +202,7 @@ def makeDataDictionary():
     populationMean = totalSum / totalCount
 
 def simulateMatch(number):
+    global teamAverageRp
     blueTeams = matches[number + offsetMatches]["alliances"]["blue"]["team_keys"]
     redTeams = matches[number + offsetMatches]["alliances"]["red"]["team_keys"]
     redList = []
@@ -215,7 +220,7 @@ def simulateMatch(number):
         if(blueList[i][0] > 1):
             bluePoints.append((blueList[i][2] * rng.standard_t(blueList[i][0]-1, size=1) + blueList[i][1]).item())
         else:
-            bluePoints.append((random.uniform(redList[i][1]/2,redList[i][1]*1.5) + blueList[i][1]))
+            bluePoints.append((random.uniform(blueList[i][1]/2,blueList[i][1]*1.5) + blueList[i][1]))
 
 
     redSum = sum(redPoints)
@@ -237,10 +242,14 @@ def simulateMatch(number):
             blueRp += 1
     for i in range(3):
         if(RPDictionary[int(redTeams[i][3:])][1] < totalMatchesPerTeam):
+            if(int(redTeams[i][3:]) == 2847):
+                teamAverageRp[number] += redRp
             RPDictionary[int(redTeams[i][3:])][0] += redRp
             RPDictionary[int(redTeams[i][3:])][1] += 1
             RPDictionary[int(redTeams[i][3:])][2].append(redPoints[i])
         if(RPDictionary[int(blueTeams[i][3:])][1] < totalMatchesPerTeam):
+            if(int(blueTeams[i][3:]) == 2847):
+                teamAverageRp[number] += blueRp
             RPDictionary[int(blueTeams[i][3:])][0] += blueRp
             RPDictionary[int(blueTeams[i][3:])][1] += 1
             RPDictionary[int(blueTeams[i][3:])][2].append(bluePoints[i])

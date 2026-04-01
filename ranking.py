@@ -10,7 +10,7 @@ def run():
         rankNumber = 0
         for t in range(len(valueList[i][1])):
             if(t+1 in ast.literal_eval(valueList[i][1])):
-                rankNumber += ast.literal_eval(valueList[i][1])[t+1]/(t+1)
+                rankNumber += ast.literal_eval(valueList[i][1])[t+1]/(t+2)
         viewList.append([valueList[i][0], rankNumber])
     sortedList = sorted(viewList, key=lambda item: item[1], reverse=True)
     for i in range(len(sortedList)):
