@@ -19,7 +19,7 @@ matches = sorted(tba.get_event_matches(eventKey), key=lambda m: m['match_number'
 
 rng = np.random.default_rng()
 
-simulations = 50000
+simulations = 5000
 
 totalMatchesPerTeam = 8
 

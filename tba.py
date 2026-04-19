@@ -5,7 +5,7 @@ from pathlib import Path
 
 # Define the base URL and API key
 BASE_URL = "https://www.thebluealliance.com/api/v3"
-API_KEY = "evMtKpcBGlJiRvCpiFxYHWUAFgIsw2Ti2QXBsODyqqplwoiIgswJlhIld7Eg0ZFd"
+API_KEY = "ALKinFFOlKzAVz5AmqjDekutET9l3OZE2ZUY6qe8w5zxobRlRpO9iYCWwEhAiBNI"
 
 # Define headers for the API request
 HEADERS = {

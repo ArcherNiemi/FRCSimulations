@@ -9,22 +9,25 @@ print("started")
 eventKey = "2026iacf"
 startMatch = 52
 endMatch = 71
-simulations = 1000
+simulations = 10000
 matchesPerTeam = 8
 teamList = [3928,10439,11219,3055,4260,5935,6805,7531,8766,6419,4728,7257,5442,4646,2847,2654,1108,167,6147,5041,525,7848,967,2227,3267,648,59,5914,11312,8821,8822,11241,5275,11210,6420,3723,9092,5837,9061,9570,1997,10476,3298,5141,5557,5576,5809,6455,7038,8737,8770,9543,9579]
 
-simulationDictionary = {} # {match number: {allaince: {teams: [], score: , win: , rp gained: }}}
+simulationDictionary = {} # {match number: {alliance: {teams: [], score: , win: , rp gained: }}}
 dataDictionary = {} # {matches played: , average score: ,stdev: }
 
 startRpDictionary = {} #{teamNum: rp}
 endRpDictionary = {} #{teamNum: rp}
 
-individualSimDictionary = {} #{teamNum: [{rank: , rp: }]} -> {teamNum: {averageRank: , averagePlace: , ranks: {rank: percent}, rps: {rp: percent}}}
-topSimDictionary = [] #[(1st team, 2nd team , ... , 8th team)] -> {(1st team, 2nd team , ... , 8th team): percent}
-matchSimDictionary = {} #{match: {alliance: [{score: ,win: , rp: }]}} -> {match: {alliance: {averageScore: , stdevScore: , winChange: , averageRp: , rpChances: {rp: percent}}}}
-robotMatchSimDictionary = {} #{team: {rank: {match: {alliance: [{score: ,win: , rp: }]}}}} -> {team: {rank: {match: {alliance: {averageScore: , stdevScore: , winChange: , averageRp: , rpChances: {rp: percent}}}}}}
+startAverageMatchDictionary = {} #{teamNum: {averageMatch: 0, matchCount: 0}}
+endAverageMatchDictionary = {} #{teamNum: {averageMatch: 0, matchCount: 0}}
 
-runRobotMatchSim = False
+individualSimDictionary = {} #{teamNum: {rank: (sum), rp: (sum), ranks: {rank: (count)}, rps: {rp: (count)}}} -> {teamNum: {averageRank: , averagePlace: , ranks: {rank: percent}, rps: {rp: percent}}}
+topSimDictionary = {} #{(1st team, 2nd team , ... , 8th team): sum} -> {(1st team, 2nd team , ... , 8th team): percent}
+matchSimDictionary = {} #{match: {alliance: {scoreSum: , scoreSquareSum: , winSum: , rpSum: , rpSumChances: {rp: sum}}}} -> {match: {alliance: {averageScore: , stdevScore: , winChange: , averageRp: , rpChances: {rp: percent}}}}
+robotMatchSimDictionary = {} #{team: {rank: {match: {alliance: {scoreSum: , scoreSquareSum: , winSum: , rpSum: , rpSumChances: {rp: sum}}}}}} -> {team: {rank: {match: {alliance: {averageScore: , stdevScore: , winChange: , averageRp: , rpChances: {rp: percent}}}}}}
+
+runRobotMatchSim = True
 
 allMatches = sorted(tba.get_event_matches(eventKey), key=lambda m: m['match_number'])
 qualMatches = [match for match in allMatches if match["comp_level"] == "qm"]
@@ -47,6 +50,7 @@ def configureDicts():
     makeSimulationDictionary()
     makeDataDictionary()
     makeRpDictionary()
+    makeAverageMatchDictionary()
 
     makeIndividualSimDictionary()
     makeMatchSimDictionary()
@@ -87,11 +91,32 @@ def makeRpDictionary():
         
 
 def getMatchRp(match, alliance):
-    return qualMatches[match]["score_breakdown"][alliance]["rp"]
+    return qualMatches[match-1]["score_breakdown"][alliance]["rp"]
 
 def makeInitialRpDictionary():
     for i,team in enumerate(teamList):
         startRpDictionary.update({team: 0})
+
+def makeAverageMatchDictionary():
+    makeInitialAverageMatchDictionary()
+
+    for i in range(startMatch-1):
+        matchNum = i+1
+        teams = getTeams(matchNum)
+        for i, team in enumerate(teams):
+            startAverageMatchDictionary[team]['matchCount'] += 1
+            if(i < 3):
+                startAverageMatchDictionary[team]['averageMatch'] += getMatchScore(matchNum, 'red')
+            else:
+                startAverageMatchDictionary[team]['averageMatch'] += getMatchScore(matchNum, 'blue')
+        
+
+def getMatchScore(match, alliance):
+    return qualMatches[match-1]["alliances"][alliance]["score"]
+
+def makeInitialAverageMatchDictionary():
+    for i,team in enumerate(teamList):
+        startAverageMatchDictionary.update({team: {'averageMatch': 0, 'matchCount': 0}})
 
 def getTeamScores(df, team):
     scores = df.loc[df['Team Number'] == team]['Points'].tolist()
@@ -102,12 +127,13 @@ def getTeamScores(df, team):
 
 def makeIndividualSimDictionary():
     for i, team in enumerate(teamList):
-        individualSimDictionary.update({team: []})
+        individualSimDictionary.update({team: {"rank": 0, "rp": 0, "ranks": {}, "rps": {}}})
 
 def makeMatchSimDictionary():
     for i in range(endMatch - (startMatch-1)):
         matchNum = i+startMatch
-        matchSimDictionary.update({matchNum: {"red": [], "blue": []}})
+        matchSimDictionary.update({matchNum: {"red": {"scoreSum": 0, "scoreSquareSum": 0, "winSum": 0, "rpSum": 0, "rpSumChances": {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}}, 
+                                              "blue": {"scoreSum": 0, "scoreSquareSum": 0, "winSum": 0, "rpSum": 0, "rpSumChances": {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}}}})
 
 def makeRobotMatchSimDictionary():
     for i, team in enumerate(teamList):
@@ -236,7 +262,31 @@ def getTeamsMatches(team):
     return teamsMatchs
 
 def sortRpDict(dictionary):
-    return dict(sorted(dictionary.items(), key=lambda item: item[1], reverse=True))
+    endAverageMatchDictionary = getTeamAverageMatch()
+    matchScoreSorted = dict(sorted(dictionary.items(), key=lambda x: endAverageMatchDictionary.get(x, 0)))
+    return dict(sorted(matchScoreSorted.items(), key=lambda item: item[1], reverse=True))
+
+def getTeamAverageMatch():
+    allTeamsAverageMatch = {} #{teamNum: averageMatch}
+    for i,team in enumerate(teamList):
+        totalScore = getTeamTotalScore(team) + startAverageMatchDictionary[team]['averageMatch']
+        averageScore = totalScore / matchesPerTeam
+        allTeamsAverageMatch.update({team: averageScore})
+    return allTeamsAverageMatch
+
+
+
+def getTeamTotalScore(team):
+    score = 0
+    teamsMatches = getTeamsMatches(team)
+    for i,match in enumerate(teamsMatches):
+        if(startAverageMatchDictionary[team]['matchCount'] + i + 1 > matchesPerTeam):
+            return score
+        matchNum = match['matchNumber']
+        alliance = match['alliance']
+
+        score += simulationDictionary[matchNum][alliance]['score']
+    return score
 
 def updateDicts():
     updateIndividualSimDict()
@@ -252,11 +302,29 @@ def addRpsToIndividualSimDict(rps):
     for i,team in enumerate(teamList):
         rank = list(rps).index(team) + 1
         rp = rps[team]
-        individualSimDictionary[team].append({"rank": rank,"rp": rp})
+        individualSimDictionary[team]["rank"] += rank
+        individualSimDictionary[team]["rp"] += rp
+        updateIndividualSimRanks(team, rank)
+        updateIndividualSimRps(team, rp)
+
+def updateIndividualSimRanks(team, rank):
+    if(rank in individualSimDictionary[team]["ranks"]):
+        individualSimDictionary[team]["ranks"][rank] += 1
+    else:
+        individualSimDictionary[team]["ranks"].update({rank: 1})
+
+def updateIndividualSimRps(team, rp):
+    if(rp in individualSimDictionary[team]["rps"]):
+        individualSimDictionary[team]["rps"][rp] += 1
+    else:
+        individualSimDictionary[team]["rps"].update({rp: 1})
 
 def updateTopSimDict():
     topEightTeams = tuple(endRpDictionary.keys())[:8]
-    topSimDictionary.append(topEightTeams)
+    if(topEightTeams in topSimDictionary):
+        topSimDictionary[topEightTeams] += 1
+    else:
+        topSimDictionary.update({topEightTeams: 1})
 
 
 def updateMatchSimDict():
@@ -264,11 +332,41 @@ def updateMatchSimDict():
         redSimData = getMatchSimData(matchStats["red"])
         blueSimData = getMatchSimData(matchStats["blue"])
 
-        matchSimDictionary[matchNum]["red"].append(redSimData)
-        matchSimDictionary[matchNum]["blue"].append(blueSimData)
+        matchSimMatch = matchSimDictionary[matchNum]
+
+        updateMatchSimScores(matchSimMatch, redSimData, blueSimData)
+        updateMatchSimSquareScores(matchSimMatch, redSimData, blueSimData)
+        updateMatchSimWins(matchSimMatch, redSimData, blueSimData)
+        updateMatchSimRps(matchSimMatch, redSimData, blueSimData)
+        updateMatchSimRpChances(matchSimMatch, redSimData, blueSimData)
+
 
 def getMatchSimData(stats):
-    return {"score": stats["score"], "win": stats["win"], "rp": stats["rp"]}
+    if(stats["win"]):
+        binaryWin = 1
+    else:
+        binaryWin = 0
+    return {"score": stats["score"], "win": binaryWin, "rp": stats["rp"]}
+
+def updateMatchSimScores(matchSimMatch, redSimData, blueSimData):
+    matchSimMatch["red"]["scoreSum"] += redSimData["score"]
+    matchSimMatch["blue"]["scoreSum"] += blueSimData["score"]
+
+def updateMatchSimSquareScores(matchSimMatch, redSimData, blueSimData):
+    matchSimMatch["red"]["scoreSquareSum"] += redSimData["score"] ** 2
+    matchSimMatch["blue"]["scoreSquareSum"] += blueSimData["score"] ** 2
+
+def updateMatchSimWins(matchSimMatch, redSimData, blueSimData):
+    matchSimMatch["red"]["winSum"] += redSimData["win"]
+    matchSimMatch["blue"]["winSum"] += blueSimData["win"]
+
+def updateMatchSimRps(matchSimMatch, redSimData, blueSimData):
+    matchSimMatch["red"]["rpSum"] += redSimData["rp"]
+    matchSimMatch["blue"]["rpSum"] += blueSimData["rp"]
+
+def updateMatchSimRpChances(matchSimMatch, redSimData, blueSimData):
+    matchSimMatch["red"]["rpSumChances"][redSimData["rp"]] += 1
+    matchSimMatch["blue"]["rpSumChances"][blueSimData["rp"]] += 1
 
 def updateRobotMatchSimDict():
     for i,team in enumerate(teamList):
@@ -280,8 +378,14 @@ def updateRobotMatchSimDict():
             redSimData = getMatchSimData(matchStats["red"])
             blueSimData = getMatchSimData(matchStats["blue"])
             
-            robotMatchSimDictionary[team][rank][matchNum]["red"].append(redSimData)
-            robotMatchSimDictionary[team][rank][matchNum]["blue"].append(blueSimData)
+            robotMatchSimMatch = robotMatchSimDictionary[team][rank][matchNum]
+
+            updateMatchSimScores(robotMatchSimMatch, redSimData, blueSimData)
+            updateMatchSimSquareScores(robotMatchSimMatch, redSimData, blueSimData)
+            updateMatchSimWins(robotMatchSimMatch, redSimData, blueSimData)
+            updateMatchSimRps(robotMatchSimMatch, redSimData, blueSimData)
+            updateMatchSimRpChances(robotMatchSimMatch, redSimData, blueSimData)
+
 
 def getTeamRank(team):
     return list(endRpDictionary.keys()).index(team)+1
@@ -295,7 +399,8 @@ def addRankToRobotMatchSimDict(team, rank):
 
     for i in range(endMatch - (startMatch-1)):
         matchNum = i+startMatch
-        newDict.update({matchNum: {"red": [], "blue": []}})
+        newDict.update({matchNum: {"red": {"scoreSum": 0, "scoreSquareSum": 0, "winSum": 0, "rpSum": 0, "rpSumChances": {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}}, 
+                                   "blue": {"scoreSum": 0, "scoreSquareSum": 0, "winSum": 0, "rpSum": 0, "rpSumChances": {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}}}})
     
     robotMatchSimDictionary[team].update({rank: newDict})
 
@@ -322,31 +427,15 @@ def sortIndividualSimDict(dictionary):
     return dict(sorted(dictionary.items(), key=lambda item: item[1]["averageRank"]))
 
 def getAverageRank(team):
-    ranks = []
-    for i, stats in enumerate(individualSimDictionary[team]):
-        ranks.append(stats["rank"])
-    return np.average(ranks)
+    return individualSimDictionary[team]["rank"]/simulations
 
 def getAverageRp(team):
-    rp = []
-    for i, stats in enumerate(individualSimDictionary[team]):
-        rp.append(stats["rp"])
-    return np.average(rp)
+    return individualSimDictionary[team]["rp"]/simulations
 
 def getAllRanks(team):
-    countRanks = createInitialRanks(team)
+    countRanks = individualSimDictionary[team]["ranks"]
     percentRanks = turnCountIntoPercent(countRanks)
     return sortStats(percentRanks, False, 0)
-
-def createInitialRanks(team):
-    ranks = {}
-    for i,result in enumerate(individualSimDictionary[team]):
-        rank = result["rank"]
-        if(rank in ranks):
-            ranks[rank] += 1
-        else:
-            ranks.update({rank: 1})
-    return ranks
 
 def turnCountIntoPercent(stats):
     newStats = {}
@@ -358,42 +447,21 @@ def sortStats(stats, sortReverse, index):
     return dict(sorted(stats.items(), key=lambda item: item[index], reverse=sortReverse))
 
 def getAllRps(team):
-    countRanks = createInitialRps(team)
+    countRanks = individualSimDictionary[team]["rps"]
     percentRanks = turnCountIntoPercent(countRanks)
     return sortStats(percentRanks, True, 0)
 
-def createInitialRps(team):
-    rps = {}
-    for i,result in enumerate(individualSimDictionary[team]):
-        rp = result["rp"]
-        if(rp in rps):
-            rps[rp] += 1
-        else:
-            rps.update({rp: 1})
-    return rps
-
 def compileTopSimDict():
     global topSimDictionary
-    countDict = createInitialTopSims()
-    percentDict = turnCountIntoPercent(countDict)
+    percentDict = turnCountIntoPercent(topSimDictionary)
     topSimDictionary = sortStats(percentDict, True, 1)
-
-def createInitialTopSims():
-    newDict = {}
-    for i,result in enumerate(topSimDictionary):
-        if(result in newDict):
-            newDict[result] += 1
-        else:
-            newDict.update({result: 1})
-    return newDict
 
 def compileMatchSimDict():
     for i,(matchNum, matchStats) in enumerate(matchSimDictionary.items()):
         for i,alliance in enumerate(["red", "blue"]):
-            scoreList, winList, rpList = createMatchSimLists(matchStats[alliance])
-            averageScore, winChance, averageRp = getMatchSimAverages(scoreList, winList, rpList)
-            stdevScore = round(np.std(scoreList),2)
-            rpChances = getRpChances(rpList)
+            averageScore, winChance, averageRp = getMatchSimAverages(matchStats[alliance]["scoreSum"], matchStats[alliance]["winSum"], matchStats[alliance]["rpSum"])
+            stdevScore = round(calculateStdev(matchStats[alliance]["scoreSum"],matchStats[alliance]["scoreSquareSum"],simulations),2)
+            rpChances = getRpChances(matchStats[alliance]["rpSumChances"])
             matchSimDictionary[matchNum][alliance] = {"averageScore": averageScore, "stdevScore": stdevScore, "winChance": winChance, "averageRp": averageRp, "rpChances": rpChances}
 
 
@@ -410,20 +478,22 @@ def createMatchSimLists(stats):
         rps.append(matchStat["rp"])
     return (scores, wins, rps)
 
-def getMatchSimAverages(scores, wins, rps):
-    averageScore = round(np.average(scores),2)
-    winChange = round(np.average(wins),5)
-    averageRp = round(np.average(rps),2)
+def getMatchSimAverages(scoreSum, winSum, rpSum):
+    averageScore = round(scoreSum/simulations,2)
+    winChange = round(winSum/simulations,5)
+    averageRp = round(rpSum/simulations,2)
     return (averageScore, winChange, averageRp)
 
-def getRpChances(rps):
-    rpCounts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
-    for i,rp in enumerate(rps):
-        rpCounts[rp] += 1
+def calculateStdev(sum, squareSum, count):
+    sumOfSquaredDeviations = squareSum - ((sum**2)/count)
+    variance = sumOfSquaredDeviations/(count-1)
+    stdev = variance**0.5
+    return stdev
 
+def getRpChances(rpSums):
     rpPercents = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
-    for i, (rp, count) in enumerate(rpCounts.items()):
-        rpPercents[rp] = count / len(rps)
+    for i, (rp, count) in enumerate(rpSums.items()):
+        rpPercents[rp] = count / simulations
     return rpPercents
 
 def compileRobotMatchSimDict():
@@ -431,10 +501,9 @@ def compileRobotMatchSimDict():
         for rankI,(rank, rankStats) in enumerate(teamStats.items()):
             for matchI,(matchNum, matchStats) in enumerate(rankStats.items()):
                 for i,alliance in enumerate(["red", "blue"]):
-                    scoreList, winList, rpList = createMatchSimLists(matchStats[alliance])
-                    averageScore, winChance, averageRp = getMatchSimAverages(scoreList, winList, rpList)
-                    stdevScore = round(np.std(scoreList),2)
-                    rpChances = getRpChances(rpList)
+                    averageScore, winChance, averageRp = getMatchSimAverages(matchStats[alliance]["scoreSum"], matchStats[alliance]["winSum"], matchStats[alliance]["rpSum"])
+                    stdevScore = round(calculateStdev(matchStats[alliance]["scoreSum"],matchStats[alliance]["scoreSquareSum"],simulations),2)
+                    rpChances = getRpChances(matchStats[alliance]["rpSumChances"])
                     robotMatchSimDictionary[team][rank][matchNum][alliance] = {"averageScore": averageScore, "stdevScore": stdevScore, "winChance": winChance, "averageRp": averageRp, "rpChances": rpChances}
 
 
