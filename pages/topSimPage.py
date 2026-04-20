@@ -28,7 +28,7 @@ def updateDict(numberOfPlaces):
     newDict = dict(sorted(newDict.items(), key=lambda item: item[1], reverse=True))
 
     # convert to AgGrid format
-    rows = [{"teams": str(k), "probability": v} for k, v in newDict.items()]
+    rows = [{"teams": str(k), "probability": round(v,4)} for k, v in newDict.items()]
     return rows
 
 def filterDict(teams, ranks, rows):
@@ -54,7 +54,7 @@ def filterDict(teams, ranks, rows):
     rows = [{"teams": str(k), "probability": round(v,4)} for k, v in newDict.items()]
     return rows
 
-dash.register_page(__name__, path="/fullPage")
+dash.register_page(__name__, path="/topSimPage")
 
 layout = html.Div([
 
