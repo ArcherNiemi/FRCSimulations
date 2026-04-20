@@ -12,8 +12,8 @@ df = pd.read_csv('individualSim.csv')
 
 def fixDictionary(dataFrame):
     newListOfDict = []
-    teams = dataFrame["teams"]
-    probability = dataFrame["value"].apply(ast.literal_eval)
+    teams = dataFrame["team"]
+    probability = dataFrame["ranks"].apply(ast.literal_eval)
     for i in range(len(teams)):
         teamName = teams[i]
         newListOfDict.append({"Team Number": teamName})

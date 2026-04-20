@@ -7,7 +7,7 @@ app.layout = html.Div([
     html.H1("My Simulation App"),
 
     html.Div([
-        dcc.Link("Full Page", href="/fullPage"),
+        dcc.Link("Top Sim Page", href="/topSimPage"),
         html.Br(),
         dcc.Link("Individual Page", href="/individualPage"),
     ]),

@@ -4,7 +4,7 @@ import pandas as pd
 import ast
 import dash
 
-df = pd.read_csv("simulateScenarios.csv")
+df = pd.read_csv("topSim.csv")
 
 app = Dash()
 
@@ -21,9 +21,9 @@ def updateDict(numberOfPlaces):
         key = tuple(teams[i][:numberOfPlaces])
 
         if key not in newDict:
-            newDict[key] = float(df["value"][i])
+            newDict[key] = float(df["percent"][i])
         else:
-            newDict[key] += float(df["value"][i])
+            newDict[key] += float(df["percent"][i])
 
     newDict = dict(sorted(newDict.items(), key=lambda item: item[1], reverse=True))
 
