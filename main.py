@@ -2,15 +2,26 @@ import tba
 import pandas as pd
 import numpy as np
 import random
+import ast
 
 print("started")
 #configure Settings
-eventKey = "2026iacf"
-startMatch = 52
-endMatch = 71
-simulations = 10000
+eventKey = "2026mil"
+startMatch = 63
+endMatch = 124
+simulations = 50000
 matchesPerTeam = 8
-teamList = [3928,10439,11219,3055,4260,5935,6805,7531,8766,6419,4728,7257,5442,4646,2847,2654,1108,167,6147,5041,525,7848,967,2227,3267,648,59,5914,11312,8821,8822,11241,5275,11210,6420,3723,9092,5837,9061,9570,1997,10476,3298,5141,5557,5576,5809,6455,7038,8737,8770,9543,9579]
+
+teamList = [
+    68, 70, 201, 263, 287, 343, 353, 359, 686, 694,
+    1640, 1671, 1678, 1771, 2122, 2169, 2200, 2333, 2403, 2481,
+    2601, 2630, 2811, 2846, 2905, 2974, 3075, 3245, 3277, 3419,
+    3492, 3637, 3707, 3928, 4089, 4122, 4270, 4362, 4421, 4476,
+    4481, 4499, 4795, 4905, 4907, 4915, 5462, 5985, 6002, 6090,
+    6238, 6925, 6989, 7039, 7250, 7426, 7457, 7594, 7717, 7763,
+    7890, 8020, 8158, 8429, 8808, 8873, 9140, 9635, 9644, 10101,
+    10526, 10604, 10633, 10950, 11065
+]
 
 simulationDictionary = {} # {match number: {alliance: {teams: [], score: , win: , rp gained: }}}
 dataDictionary = {} # {matches played: , average score: ,stdev: }
@@ -119,10 +130,13 @@ def makeInitialAverageMatchDictionary():
 
 def getTeamScores(df, team):
     scores = df.loc[df['Team Number'] == team]['Points'].tolist()
+    intScores = []
+    for i,score in enumerate(scores):
+        intScores.append(float(score))
     if(scores == []):
         return [0]
     else:
-        return scores
+        return intScores
 
 def makeIndividualSimDictionary():
     for i, team in enumerate(teamList):
@@ -141,6 +155,7 @@ def makeRobotMatchSimDictionary():
 def simulate():
     global endRpDictionary
     for i in range(simulations):
+        makeSimulationDictionary()
         simulateAllMatches()
 
         if(i % 100 == 0):
@@ -149,8 +164,6 @@ def simulate():
         endRpDictionary = getAllTeamsRP()
 
         updateDicts()
-
-        makeSimulationDictionary()
 
 def simulateAllMatches():
     for i in range(endMatch - (startMatch-1)):
@@ -227,9 +240,9 @@ def determineRP(win, points):
     rp = 0
     if(win):
         rp += 3
-    if(points > 100):
-        rp += 1
     if(points > 360):
+        rp += 1
+    if(points > 500):
         rp += 1
     return rp
 
@@ -548,18 +561,16 @@ def saveTopSimDictionary(dictionary):
 def saveMatchSimDictionary(dictionary):
     rows = []
     for matchNum, stats in dictionary.items():
+        for i,alliance in enumerate(["red","blue"]):
             rows.append({
                 "match": matchNum,
-                "redScore": stats["red"]["averageScore"],
-                "redStdev": stats["red"]["stdevScore"],
-                "redRp": stats["red"]["averageRp"],
-                "redWinChance": stats["red"]["winChance"],
-                "redRpChances": stats["red"]["rpChances"],
-                "blueScore": stats["blue"]["averageScore"],
-                "blueStdev": stats["blue"]["stdevScore"],
-                "blueRp": stats["blue"]["averageRp"],
-                "blueWinChance": stats["blue"]["winChance"],
-                "blueRpChances": stats["blue"]["rpChances"]
+                "alliance": alliance,
+                "teams": simulationDictionary[matchNum][alliance]["teams"],
+                "Score": stats[alliance]["averageScore"],
+                "Stdev": stats[alliance]["stdevScore"],
+                "Rp": stats[alliance]["averageRp"],
+                "WinChance": stats[alliance]["winChance"],
+                "RpChances": stats[alliance]["rpChances"],
             })
 
     df = pd.DataFrame(rows)
@@ -570,21 +581,19 @@ def saveRobotMatchSimDictionary(dictionary):
     for teamNum, teamStats in dictionary.items():
         for rankNum, rankStats in teamStats.items():
             for matchNum, matchStats in rankStats.items():
-                rows.append({
-                    "team": teamNum,
-                    "rank": rankNum,
-                    "match": matchNum,
-                    "redScore": matchStats["red"]["averageScore"],
-                    "redStdev": matchStats["red"]["stdevScore"],
-                    "redRp": matchStats["red"]["averageRp"],
-                    "redWinChance": matchStats["red"]["winChance"],
-                    "redRpChances": matchStats["red"]["rpChances"],
-                    "blueScore": matchStats["blue"]["averageScore"],
-                    "blueStdev": matchStats["blue"]["stdevScore"],
-                    "blueRp": matchStats["blue"]["averageRp"],
-                    "blueWinChance": matchStats["blue"]["winChance"],
-                    "blueRpChances": matchStats["blue"]["rpChances"]
-                })
+                for i,alliance in enumerate(["red","blue"]):
+                    rows.append({
+                        "team": teamNum,
+                        "rank": rankNum,
+                        "match": matchNum,
+                        "alliance": alliance,
+                        "teams": simulationDictionary[matchNum][alliance]["teams"],
+                        "Score": matchStats[alliance]["averageScore"],
+                        "Stdev": matchStats[alliance]["stdevScore"],
+                        "Rp": matchStats[alliance]["averageRp"],
+                        "WinChance": matchStats[alliance]["winChance"],
+                        "RpChances": matchStats[alliance]["rpChances"],
+                    })
 
     df = pd.DataFrame(rows)
     df.to_csv("robotMatchSim.csv", index=False)

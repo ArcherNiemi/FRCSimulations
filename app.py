@@ -10,6 +10,10 @@ app.layout = html.Div([
         dcc.Link("Top Sim Page", href="/topSimPage"),
         html.Br(),
         dcc.Link("Individual Page", href="/individualPage"),
+        html.Br(),
+        dcc.Link("Match Sim Page", href="/matchSimPage"),
+        html.Br(),
+        dcc.Link("Robot Match Sim Page", href="/robotMatchSimPage"),
     ]),
 
     html.Hr(),
